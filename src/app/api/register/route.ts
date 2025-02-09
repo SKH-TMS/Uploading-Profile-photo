@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
 import { generateToken, setToken } from "../../../utils/token";
-
+import bcrypt from "bcryptjs"; // Import bcrypt for password hashing
 const uri = process.env.MONGODB_URI || "mongodb://localhost:27017";
 const client = new MongoClient(uri);
 
 export async function POST(req: Request) {
   try {
-    const { firstName, secondName, email, password, contact } =
-      await req.json();
+    const { firstName, lastName, email, password, contact } = await req.json();
 
     // Connect to MongoDB
     await client.connect();
@@ -24,25 +23,27 @@ export async function POST(req: Request) {
       });
     }
 
+    // Hash the password before storing
+    const hashedPassword = await bcrypt.hash(password, 10);
     // Default profile picture
-    const profilePic_URL = "/default-profile.png";
+    const profilePic = "/default-profile.png";
 
     // Insert new user into database
     const result = await collection.insertOne({
       firstName,
-      secondName,
+      lastName,
       email,
-      password,
+      password: hashedPassword, // Store the hashed password
       contact: contact || "", // Optional field
-      profilePic_URL,
+      profilePic,
     });
 
     // Generate JWT token
     const token = generateToken({
       email,
       firstName,
-      secondName,
-      profilePic_URL,
+      lastName,
+      profilePic,
       contact,
     });
 
